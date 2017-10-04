@@ -900,6 +900,23 @@ class DnnSupport {
     return false;
   }
 
+  // Performs a half-precision forwards batch normalization operation onto the
+  // stream. See DoBatchNormalizationForward above for argument details.
+  virtual bool DoBatchNormalizationForward(
+      Stream* stream, const DeviceMemory<Eigen::half>& x,
+      const DeviceMemory<float>& scale, const DeviceMemory<float>& offset,
+      const DeviceMemory<float>& estimated_mean,
+      const DeviceMemory<float>& estimated_variance,
+      const dnn::BatchDescriptor& x_desc,
+      const dnn::BatchDescriptor& scale_offset_desc, const double epsilon,
+      DeviceMemory<Eigen::half>* y, DeviceMemory<float>* batch_mean,
+      DeviceMemory<float>* batch_var, DeviceMemory<float>* reserve_space_1,
+      DeviceMemory<float>* reserve_space_2, bool is_training,
+      std::function<const DeviceMemory<float>&()> var_to_inv_var,
+      std::function<void()> inv_var_to_var) {
+    return false;
+  }
+
   // Performs a single-precision backward batch normalization gradient
   // computation operation onto the stream.
   //
@@ -923,6 +940,21 @@ class DnnSupport {
       const dnn::BatchDescriptor& x_desc,
       const dnn::BatchDescriptor& scale_offset_desc, const double epsilon,
       DeviceMemory<float>* x_backprop, DeviceMemory<float>* scale_backprop,
+      DeviceMemory<float>* offset_backprop) {
+    return false;
+  }
+
+  // Performs a half-precision backward batch normalization gradient computation
+  // operation onto the stream. See DoBatchNormalizationBackward above for
+  // argument details.
+  virtual bool DoBatchNormalizationBackward(
+      Stream* stream, const DeviceMemory<Eigen::half>& y_backprop,
+      const DeviceMemory<Eigen::half>& x, const DeviceMemory<float>& scale,
+      const DeviceMemory<float>& mean, const DeviceMemory<float>& variance,
+      const dnn::BatchDescriptor& x_desc,
+      const dnn::BatchDescriptor& scale_offset_desc, const double epsilon,
+      DeviceMemory<Eigen::half>* x_backprop,
+      DeviceMemory<float>* scale_backprop,
       DeviceMemory<float>* offset_backprop) {
     return false;
   }
@@ -1126,8 +1158,8 @@ class DnnSupport {
 
   // Return a list of algorithms supported by the forward convolution pass.
   virtual bool GetConvolveAlgorithms(
-      bool with_winograd_nonfused,
-      std::vector<AlgorithmDesc::Index>* out_algorithms);
+      bool with_winograd_nonfused, int cc_major, int cc_minor,
+      std::vector<AlgorithmDesc>* out_algorithms);
 
   // Version of DoConvolve that uses pre-quantized 8 bit coefficients.
   // coefficient_scales specifies the scaling of each column of coefficients:
@@ -1206,8 +1238,8 @@ class DnnSupport {
   // Return a list of algorithms supported by the backward convolution pass for
   // data.
   virtual bool GetConvolveBackwardDataAlgorithms(
-      bool with_winograd_nonfused,
-      std::vector<AlgorithmDesc::Index>* out_algorithms);
+      bool with_winograd_nonfused, int cc_major, int cc_minor,
+      std::vector<AlgorithmDesc>* out_algorithms);
 
   virtual bool DoConvolveBackwardData(
       Stream* stream, const FilterDescriptor& filter_descriptor,
@@ -1255,8 +1287,8 @@ class DnnSupport {
   // Return a list of algorithms supported by the backward convolution pass for
   // filters.
   virtual bool GetConvolveBackwardFilterAlgorithms(
-      bool with_winograd_nonfused,
-      std::vector<AlgorithmDesc::Index>* out_algorithms);
+      bool with_winograd_nonfused, int cc_major, int cc_minor,
+      std::vector<AlgorithmDesc>* out_algorithms);
 
   virtual bool DoConvolveBackwardFilter(
       Stream* stream, const BatchDescriptor& input_descriptor,
